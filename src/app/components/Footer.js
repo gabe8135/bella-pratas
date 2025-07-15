@@ -1,6 +1,6 @@
 export default function Footer() {
   return (
-    <footer className="mt-16 py-4 text-center bg-black text-white text-sm ">
+    <footer className="mt-16 py-4 px-2 text-center bg-black text-white text-sm ">
       <div>
         <span className="text-sm font-semibold">Bella Pratas</span> © {new Date().getFullYear()} Todos os direitos reservados | Feito com <span className="text-red-700">♥</span> de Gabriel para <a href="https://instagram.com/bellapratas" target="_blank" rel="noopener" >Sellane</a>
       </div>
