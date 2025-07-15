@@ -22,7 +22,7 @@ export default function Login() {
       setMensagem('Usuário ou senha inválidos.');
     } else {
       setMensagem('Login realizado com sucesso!');
-      setTimeout(() => router.push('/painel'), 1200);
+      setTimeout(() => router.push('/pagina-administrativa'), 1200);
     }
   }
 

@@ -32,10 +32,10 @@ export default function Header() {
       />
       <button
         onClick={handleAdminClick}
-        className="bg-gray-600 p-3 rounded-full hover:bg-gray-700 transition flex items-center justify-center"
+        className="bg-gray-600 p-2 rounded-full hover:bg-gray-700 transition flex items-center justify-center"
         aria-label="Painel Administrativo"
       >
-        <UserIcon className="h-6 w-6 text-white" />
+        <UserIcon className="h-5 w-5 text-white" />
       </button>
     </header>
   );
