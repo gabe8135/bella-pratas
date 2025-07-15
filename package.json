@@ -5,11 +5,13 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "postbuild": "netlify build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@netlify/next": "^1.4.9",
     "@supabase/supabase-js": "^2.51.0",
     "bcryptjs": "^3.0.2",
     "browser-image-compression": "^2.0.2",
