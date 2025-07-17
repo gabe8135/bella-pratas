@@ -11,6 +11,7 @@ export default function CadastrarProduto() {
   const [mensagem, setMensagem] = useState('');
   const [loading, setLoading] = useState(false);
   const [autenticado, setAutenticado] = useState(false);
+  const [toast, setToast] = useState({ show: false, text: '', color: 'green' });
 
   useEffect(() => {
     async function verificarLogin() {
@@ -25,6 +26,13 @@ export default function CadastrarProduto() {
     verificarLogin();
     fetchCategorias();
   }, []);
+
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => setToast({ ...toast, show: false }), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   if (!autenticado) return null;
 
@@ -46,7 +54,9 @@ export default function CadastrarProduto() {
     setLoading(true);
     let imagem_url = '';
     if (form.imagem) {
-      const fileName = `${Date.now()}-${form.nome.replace(/\s/g, '')}.webp`;
+      // Remove caracteres especiais e acentos
+      const nomeLimpo = form.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '');
+      const fileName = `${Date.now()}-${nomeLimpo}.webp`;
       const { error } = await supabase.storage
         .from('produtos')
         .upload(fileName, form.imagem, { contentType: 'image/webp' });
@@ -71,8 +81,10 @@ export default function CadastrarProduto() {
     setLoading(false);
     if (err) {
       setMensagem('Erro ao cadastrar: ' + err.message);
+      setToast({ show: true, text: 'Erro ao cadastrar: ' + err.message, color: 'red' });
     } else {
       setMensagem('Produto cadastrado com sucesso! 💍');
+      setToast({ show: true, text: 'Produto cadastrado com sucesso! 💍', color: 'green' });
       setForm({ nome: '', descricao: '', preco: '', categoria_id: '', imagem: null, destaque: false, disponivel: true });
     }
   }
@@ -148,6 +160,11 @@ export default function CadastrarProduto() {
         </button>
       </form>
       {mensagem && <p className="mt-4 text-center text-green-600 font-semibold">{mensagem}</p>}
+      {toast.show && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded shadow-lg bg-white border border-gray-300 text-center z-50 text-${toast.color}-600 font-semibold`}>
+          {toast.text}
+        </div>
+      )}
     </div>
   );
 }

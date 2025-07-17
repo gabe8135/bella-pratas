@@ -10,7 +10,7 @@ export default function EditarProduto() {
   const id = params.id;
 
   const [form, setForm] = useState({
-    nome: '', descricao: '', preco: '', categoria_id: '', imagem: null, destaque: false, disponivel: true
+    nome: '', descricao: '', preco: '', categoria_id: '', imagem: null, destaque: false, disponivel: true, imagem_url: ''
   });
   const [categorias, setCategorias] = useState([]);
   const [mensagem, setMensagem] = useState('');
@@ -43,9 +43,21 @@ export default function EditarProduto() {
     }
   }
 
+  // Função para limpar o nome do arquivo
+  function sanitizeFileName(nome) {
+    return nome
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toLowerCase();
+  }
+
   async function handleImage(e) {
     const file = e.target.files[0];
     if (!file) return;
+    const nomeLimpo = sanitizeFileName(form.nome || file.name.split('.')[0]);
+    const fileName = `${Date.now()}-${nomeLimpo}.webp`;
+
     const options = {
       maxSizeMB: 0.5,
       maxWidthOrHeight: 800,
@@ -53,7 +65,10 @@ export default function EditarProduto() {
       fileType: 'image/webp'
     };
     const compressedFile = await imageCompression(file, options);
-    setForm({ ...form, imagem: compressedFile });
+
+    // Cria um novo File com nome limpo e tipo correto
+    const webpFile = new File([compressedFile], fileName, { type: 'image/webp' });
+    setForm({ ...form, imagem: webpFile });
   }
 
   function handleChange(e) {
@@ -66,9 +81,9 @@ export default function EditarProduto() {
     setLoading(true);
     let imagem_url = form.imagem_url;
 
-    // Se o usuário selecionou uma nova imagem, faz upload
+    // Se o usuário selecionou uma nova imagem, faz upload com nome sanitizado
     if (form.imagem) {
-      const fileName = `${Date.now()}-${form.nome.replace(/\s/g, '')}.webp`;
+      const fileName = form.imagem.name; // já sanitizado
       const { error } = await supabase.storage
         .from('produtos')
         .upload(fileName, form.imagem, { contentType: 'image/webp' });
@@ -100,6 +115,10 @@ export default function EditarProduto() {
       setMensagem('Produto atualizado com sucesso!');
       setTimeout(() => router.push('/painel/produtos'), 1200);
     }
+  }
+
+  function handleCancel() {
+    router.push('/painel/produtos');
   }
 
   return (
@@ -161,13 +180,23 @@ export default function EditarProduto() {
           <input type="checkbox" name="disponivel" checked={form.disponivel} onChange={handleChange} />
           <span className="text-[#7b1e3a] font-medium">Disponível</span>
         </label>
-        <button
-          type="submit"
-          className="w-full bg-[#7b1e3a] text-white px-5 py-2 rounded font-semibold hover:bg-black transition"
-          disabled={loading}
-        >
-          {loading ? 'Salvando...' : 'Salvar Alterações'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            className="w-full bg-[#7b1e3a] text-white px-5 py-2 rounded font-semibold hover:bg-black transition"
+            disabled={loading}
+          >
+            {loading ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+          <button
+            type="button"
+            className="w-full bg-gray-300 text-[#7b1e3a] px-5 py-2 rounded font-semibold hover:bg-black hover:text-white transition"
+            onClick={handleCancel}
+            disabled={loading}
+          >
+            Cancelar
+          </button>
+        </div>
       </form>
       {mensagem && <p className="mt-4 text-center text-green-600 font-semibold">{mensagem}</p>}
     </div>

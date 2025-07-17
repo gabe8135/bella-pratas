@@ -1,9 +1,11 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { useState, useEffect } from 'react';
 
 export default function PaginaAdministrativa() {
   const router = useRouter();
+  const [toast, setToast] = useState({ show: false, text: '', color: 'green' });
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -15,7 +17,7 @@ export default function PaginaAdministrativa() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-8 bg-white rounded-xl shadow-lg border border-gray-200">
+    <div className="max-w-2xl mt-12 mx-auto p-8 bg-white rounded-xl shadow-lg border border-gray-200">
       <h2 className="text-3xl font-bold mb-6 text-center text-[#7b1e3a] font-serif">Página Administrativa</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
         <button
@@ -52,6 +54,11 @@ export default function PaginaAdministrativa() {
         </button>
         
       </div>
+      {toast.show && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded shadow-lg bg-white border border-gray-300 text-center z-50 text-${toast.color}-600 font-semibold`}>
+          {toast.text}
+        </div>
+      )}
     </div>
   );
 }
