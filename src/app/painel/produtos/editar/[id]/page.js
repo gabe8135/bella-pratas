@@ -131,7 +131,7 @@ export default function EditarProduto() {
           value={form.nome}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 rounded border border-gray-300 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium"
         />
         <input
           name="descricao"
@@ -139,7 +139,7 @@ export default function EditarProduto() {
           value={form.descricao}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 rounded border border-gray-300 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium"
         />
         <input
           name="preco"
@@ -149,29 +149,65 @@ export default function EditarProduto() {
           value={form.preco}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 rounded border border-gray-300 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium"
         />
         <select
           name="categoria_id"
           value={form.categoria_id}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 rounded border border-gray-300 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium"
         >
           <option value="">Selecione a categoria</option>
           {categorias.map(cat => (
             <option key={cat.id} value={cat.id}>{cat.nome}</option>
           ))}
         </select>
-        {form.imagem_url && (
-          <img src={form.imagem_url} alt="Atual" className="w-32 h-32 object-cover rounded mb-2 border border-gray-300" />
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImage}
-          className="w-full px-4 py-2 rounded border border-gray-300 bg-gray-50 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
-        />
+        {/* Campo de imagem estilizado */}
+        <div className="flex flex-col items-center mb-2">
+          {form.imagem_url && (
+            <div className="relative mb-2">
+              <img
+                src={form.imagem_url}
+                alt="Atual"
+                className="w-32 h-32 object-cover rounded-xl border border-gray-300 shadow"
+              />
+              <button
+                type="button"
+                className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow hover:bg-black transition"
+                title="Remover foto"
+                onClick={() => setForm({ ...form, imagem_url: '', imagem: null })}
+              >
+                ✖
+              </button>
+            </div>
+          )}
+          <label
+            htmlFor="imagem"
+            className="flex items-center gap-2 px-6 py-3 bg-[#7b1e3a] text-white rounded-full font-semibold shadow hover:bg-black transition cursor-pointer"
+            style={{ minWidth: 180 }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            {form.imagem_url ? "Trocar Foto" : "Adicionar Foto"}
+            <input
+              id="imagem"
+              type="file"
+              accept="image/*"
+              onChange={handleImage}
+              className="hidden"
+            />
+          </label>
+          {form.imagem && (
+            <img
+              src={URL.createObjectURL(form.imagem)}
+              alt="Prévia"
+              className="mt-2 w-32 h-32 object-cover rounded-xl border border-gray-300 shadow"
+            />
+          )}
+        </div>
         <label className="flex items-center gap-2">
           <input type="checkbox" name="destaque" checked={form.destaque} onChange={handleChange} />
           <span className="text-[#7b1e3a] font-medium">Destaque</span>
@@ -183,14 +219,14 @@ export default function EditarProduto() {
         <div className="flex gap-2">
           <button
             type="submit"
-            className="w-full bg-[#7b1e3a] text-white px-5 py-2 rounded font-semibold hover:bg-black transition"
+            className="w-full bg-[#7b1e3a] text-white px-5 py-3 rounded-full font-semibold hover:bg-black transition"
             disabled={loading}
           >
             {loading ? 'Salvando...' : 'Salvar Alterações'}
           </button>
           <button
             type="button"
-            className="w-full bg-gray-300 text-[#7b1e3a] px-5 py-2 rounded font-semibold hover:bg-black hover:text-white transition"
+            className="w-full bg-gray-300 text-[#7b1e3a] px-5 py-3 rounded-full font-semibold hover:bg-black hover:text-white transition"
             onClick={handleCancel}
             disabled={loading}
           >
@@ -198,7 +234,11 @@ export default function EditarProduto() {
           </button>
         </div>
       </form>
-      {mensagem && <p className="mt-4 text-center text-green-600 font-semibold">{mensagem}</p>}
+      {mensagem && (
+        <div className={`mt-6 px-6 py-4 rounded-xl text-center font-semibold shadow transition ${mensagem.startsWith('Erro') ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+          {mensagem}
+        </div>
+      )}
     </div>
   );
 }
