@@ -60,8 +60,12 @@ export default function Home() {
 
       {/* Filtro de categorias */}
       <Tabs defaultValue={categoriaFiltro || "todas"} className="w-full mb-8">
-        <TabsList className="flex justify-start gap-2">
-          <TabsTrigger value="todas" onClick={() => setCategoriaFiltro("")}>
+        <TabsList className="flex justify-start gap-2 overflow-x-auto scrollbar-hide bg-[#f8f8f8] rounded-full p-2">
+          <TabsTrigger
+            value="todas"
+            onClick={() => setCategoriaFiltro("")}
+            className="text-[#7b1e3a] data-[state=active]:bg-black data-[state=active]:text-white px-4 py-1 rounded-full font-semibold transition"
+          >
             Todas
           </TabsTrigger>
           {categorias.map(cat => (
@@ -69,6 +73,7 @@ export default function Home() {
               key={cat.id}
               value={String(cat.id)}
               onClick={() => setCategoriaFiltro(String(cat.id))}
+              className="text-[#7b1e3a] data-[state=active]:bg-black data-[state=active]:text-white px-4 py-1 rounded-full font-semibold transition"
             >
               {cat.nome}
             </TabsTrigger>
@@ -103,7 +108,7 @@ export default function Home() {
                 href={`https://wa.me/5513997033980?text=Oi%20gostaria%20de%20saber%20mais%20sobre%20${encodeURIComponent(produto.nome)}`}
                 target="_blank"
                 rel="noopener"
-                className="bg-[#7b1e3a] text-white px-4 py-2 rounded hover:bg-black transition mt-1 text-sm font-semibold"
+                className="bg-[#7b1e3a] text-white px-6 py-2 rounded-lg hover:bg-black transition mt-1 text-sm font-semibold"
               >
                 <span>Comprar</span>
               </a>
@@ -153,7 +158,7 @@ export default function Home() {
                   <a
                     href={`https://wa.me/5513997033980?text=Oi%20gostaria%20de%20saber%20mais%20sobre%20${encodeURIComponent(produtoSelecionado.nome)}`}
                     target="_blank"
-                    className="bg-[#7b1e3a] text-white px-6 py-3 rounded hover:bg-black mb-4"
+                    className="bg-[#7b1e3a] text-white px-8 py-3 rounded-full hover:bg-black mb-4"
                   >
                     Comprar
                   </a>

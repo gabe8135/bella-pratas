@@ -104,7 +104,7 @@ export default function CadastrarProduto() {
           value={form.nome}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 rounded border border-gray-300 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium"
         />
         <input
           name="descricao"
@@ -112,7 +112,7 @@ export default function CadastrarProduto() {
           value={form.descricao}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 rounded border border-gray-300 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium"
         />
         <input
           name="preco"
@@ -122,27 +122,49 @@ export default function CadastrarProduto() {
           value={form.preco}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 rounded border border-gray-300 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium"
         />
         <select
           name="categoria_id"
           value={form.categoria_id}
           onChange={handleChange}
           required
-          className="w-full px-4 py-2 rounded border border-gray-300 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium"
         >
           <option value="">Selecione a categoria</option>
           {categorias.map(cat => (
             <option key={cat.id} value={cat.id}>{cat.nome}</option>
           ))}
         </select>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImage}
-          required
-          className="w-full px-4 py-2 rounded border border-gray-300 bg-gray-50 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition"
-        />
+        {/* Campo de upload de foto estilizado */}
+        <div className="flex flex-col items-center">
+          <label
+            htmlFor="imagem"
+            className="flex items-center gap-2 px-6 py-3 bg-[#7b1e3a] text-white rounded-full font-semibold shadow hover:bg-black transition cursor-pointer"
+            style={{ minWidth: 180 }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            Adicionar Foto
+            <input
+              id="imagem"
+              type="file"
+              accept="image/*"
+              onChange={handleImage}
+              required
+              className="hidden"
+            />
+          </label>
+          {form.imagem && (
+            <img
+              src={URL.createObjectURL(form.imagem)}
+              alt="Prévia"
+              className="mt-4 w-40 h-40 object-cover rounded-xl border border-gray-300 shadow"
+            />
+          )}
+        </div>
         <label className="flex items-center gap-2">
           <input type="checkbox" name="destaque" checked={form.destaque} onChange={handleChange} />
           <span className="text-[#7b1e3a] font-medium">Destaque</span>
@@ -153,16 +175,26 @@ export default function CadastrarProduto() {
         </label>
         <button
           type="submit"
-          className="w-full bg-[#7b1e3a] text-white px-5 py-2 rounded font-semibold hover:bg-black transition"
+          className="w-full bg-[#7b1e3a] text-white px-6 py-3 rounded-full font-semibold hover:bg-black transition"
           disabled={loading}
         >
           {loading ? 'Enviando...' : 'Cadastrar'}
         </button>
       </form>
-      {mensagem && <p className="mt-4 text-center text-green-600 font-semibold">{mensagem}</p>}
       {toast.show && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded shadow-lg bg-white border border-gray-300 text-center z-50 text-${toast.color}-600 font-semibold`}>
-          {toast.text}
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl px-8 py-6 text-center border border-gray-200 max-w-sm w-full">
+            <h4 className={`text-lg font-bold mb-2 ${toast.color === 'green' ? 'text-green-600' : 'text-red-600'}`}>
+              {toast.color === 'green' ? 'Sucesso!' : 'Erro'}
+            </h4>
+            <p className="mb-4">{toast.text}</p>
+            <button
+              className="bg-[#7b1e3a] text-white px-6 py-2 rounded-full font-semibold hover:bg-black transition"
+              onClick={() => setToast({ ...toast, show: false })}
+            >
+              OK
+            </button>
+          </div>
         </div>
       )}
     </div>

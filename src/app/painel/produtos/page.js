@@ -11,10 +11,17 @@ export default function ProdutosPainel() {
   const [form, setForm] = useState({ nome: '', descricao: '', preco: '', imagem: null });
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState({ show: false, produtoId: null });
+  const [categoriaFiltro, setCategoriaFiltro] = useState('');
+  const [categorias, setCategorias] = useState([]);
   const router = useRouter();
+
+  const produtosFiltrados = categoriaFiltro
+    ? produtos.filter(p => String(p.categoria_id) === String(categoriaFiltro))
+    : produtos;
 
   useEffect(() => {
     fetchProdutos();
+    fetchCategorias();
   }, []);
 
   useEffect(() => {
@@ -30,6 +37,11 @@ export default function ProdutosPainel() {
       .select('*, categorias(nome)')
       .order('id', { ascending: false });
     setProdutos(data || []);
+  }
+
+  async function fetchCategorias() {
+    const { data } = await supabase.from('categorias').select('*');
+    setCategorias(data || []);
   }
 
   async function alterarDisponibilidade(id, disponivel) {
@@ -158,19 +170,48 @@ export default function ProdutosPainel() {
   return (
     <div className="max-w-6xl mx-auto mt-10 p-4 bg-white rounded-xl shadow-lg border border-gray-200">
       <h2 className="text-3xl font-bold mb-6 text-center text-[#7b1e3a] font-serif">Produtos</h2>
+      
+      {/* Filtro de categorias */}
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
+        <label className="font-semibold text-[#7b1e3a] flex items-center">
+          Filtrar por categoria:
+          <div className="relative ml-2 flex items-center">
+            <select
+              className="appearance-none pr-10 pl-4 py-2 rounded-full border border-gray-300 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium w-35"
+              value={categoriaFiltro}
+              onChange={e => setCategoriaFiltro(e.target.value)}
+            >
+              <option value="">Todas</option>
+              {categorias.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.nome}</option>
+              ))}
+            </select>
+            <svg
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7b1e3a] pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </label>
+        <span className="text-gray-500 text-sm">{produtosFiltrados.length} produto(s) encontrado(s)</span>
+      </div>
+
       {mensagem && <p className="mb-4 text-center text-green-600 font-semibold">{mensagem}</p>}
       {toast.show && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded shadow-lg bg-white border border-gray-300 text-center z-50 text-${toast.color}-600 font-semibold`}>
           {toast.text}
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {produtos.map(produto => (
-          <div key={produto.id} className="bg-white border border-gray-200 rounded-xl shadow p-4 flex flex-col items-start">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+        {produtosFiltrados.map(produto => (
+          <div key={produto.id} className="bg-white border border-gray-100 rounded-2xl shadow-lg p-6 flex flex-col items-start transition hover:scale-[1.02]">
             <img
               src={produto.imagem_url}
               alt={produto.nome}
-              className="w-full h-40 object-cover rounded-lg border border-gray-300 mb-2"
+              className="w-full h-40 object-cover rounded-xl border border-gray-200 mb-3"
               style={{ background: '#f8f8f8' }}
             />
             <h3 className="text-lg font-bold mb-1 text-[#7b1e3a] font-serif">{produto.nome}</h3>
@@ -192,14 +233,14 @@ export default function ProdutosPainel() {
             <div className="flex gap-2 mt-4">
               <button
                 onClick={() => editarProduto(produto.id)}
-                className="px-4 py-2 rounded font-semibold bg-[#7b1e3a] text-white hover:bg-black transition"
+                className="px-4 py-2 rounded-full font-semibold bg-[#7b1e3a] text-white hover:bg-black transition"
                 title="Editar produto"
               >
                 Editar
               </button>
               <button
                 onClick={() => setModal({ show: true, produtoId: produto.id })}
-                className="px-4 py-2 rounded font-semibold bg-red-600 text-white hover:bg-black transition"
+                className="px-4 py-2 rounded-full font-semibold bg-red-600 text-white hover:bg-black transition"
                 title="Excluir produto"
               >
                 Excluir
