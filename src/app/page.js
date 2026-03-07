@@ -458,7 +458,7 @@ export default function Home() {
               Curadoria premium em Prata 925
             </span>
             <h1 className="luxury-title mt-4 text-4xl font-semibold leading-[1.05] text-[#241b16] sm:text-6xl">
-              Pratas que convertem no primeiro olhar.
+              Pratas que encantam no primeiro olhar.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#4d3b32] sm:text-lg">
               Escolha aneis, brincos, pulseiras e conjuntos em uma vitrine
@@ -472,7 +472,7 @@ export default function Home() {
                 className="inline-flex items-center gap-2 rounded-full bg-[#221813] px-6 py-3 text-sm font-semibold text-[#faefe1] transition hover:bg-black"
                 {...ctaButtonMotion}
               >
-                Quero escolher minha peca
+                Quero escolher minha peça
                 <ArrowUpRight className="h-4 w-4" />
               </motion.a>
               <motion.a
@@ -502,13 +502,13 @@ export default function Home() {
               transition={{ duration: 0.26, ease: animationEase }}
             >
               <p className="text-xs uppercase tracking-[0.2em] text-[#7b5c42]">
-                Pecas cadastradas
+                Peças cadastradas
               </p>
               <p className="mt-2 text-3xl font-semibold text-[#221813]">
                 {produtos.length}
               </p>
               <p className="mt-1 text-sm text-[#5f4a3f]">
-                Selecao pronta para compra imediata
+                Seleção pronta para compra imediata
               </p>
             </motion.div>
             <motion.div
@@ -528,7 +528,7 @@ export default function Home() {
                 {categorias.length}
               </p>
               <p className="mt-1 text-sm text-[#5f4a3f]">
-                Navegacao rapida para achar sua peca ideal
+                Navegação rápida para achar sua peça ideal
               </p>
             </motion.div>
             <motion.div
@@ -548,7 +548,7 @@ export default function Home() {
                 {destaques.length}
               </p>
               <p className="mt-1 text-sm text-[#5f4a3f]">
-                As pecas mais pedidas pelas clientes
+                As peças mais pedidas pelas clientes
               </p>
             </motion.div>
           </motion.div>
@@ -574,7 +574,7 @@ export default function Home() {
             </h2>
           </div>
           <p className="max-w-md text-sm text-[#5f4a3f]">
-            Arraste para o lado e clique na peca que chamou sua atencao para
+            Arraste para o lado e clique na peça que chamou sua atenção para
             abrir o detalhe em segundos.
           </p>
         </motion.div>
