@@ -14,23 +14,48 @@ export default function CarrosselDestaques({
   const containerRef = useRef(null);
 
   useEffect(() => {
-    const motionMedia = window.matchMedia(
-      "(prefers-reduced-motion: no-preference)",
-    );
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      setAutoScrollAtivo(false);
+      return undefined;
+    }
+
+    const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
     const widthMedia = window.matchMedia("(min-width: 768px)");
 
     function atualizarAutoScroll() {
-      setAutoScrollAtivo(motionMedia.matches && widthMedia.matches);
+      // On browsers without prefers-reduced-motion support, `matches` stays false.
+      setAutoScrollAtivo(!motionMedia.matches && widthMedia.matches);
+    }
+
+    function registrarListener(mediaQueryList, callback) {
+      if (typeof mediaQueryList.addEventListener === "function") {
+        mediaQueryList.addEventListener("change", callback);
+        return () => mediaQueryList.removeEventListener("change", callback);
+      }
+
+      // Safari iOS versions still expose addListener/removeListener.
+      if (typeof mediaQueryList.addListener === "function") {
+        mediaQueryList.addListener(callback);
+        return () => mediaQueryList.removeListener(callback);
+      }
+
+      return () => {};
     }
 
     atualizarAutoScroll();
 
-    motionMedia.addEventListener("change", atualizarAutoScroll);
-    widthMedia.addEventListener("change", atualizarAutoScroll);
+    const removerMotionListener = registrarListener(
+      motionMedia,
+      atualizarAutoScroll,
+    );
+    const removerWidthListener = registrarListener(
+      widthMedia,
+      atualizarAutoScroll,
+    );
 
     return () => {
-      motionMedia.removeEventListener("change", atualizarAutoScroll);
-      widthMedia.removeEventListener("change", atualizarAutoScroll);
+      removerMotionListener();
+      removerWidthListener();
     };
   }, []);
 
