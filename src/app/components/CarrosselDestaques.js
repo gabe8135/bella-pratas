@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function CarrosselDestaques({
   destaques: destaquesRecebidos = [],
@@ -10,7 +10,29 @@ export default function CarrosselDestaques({
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [autoScrollAtivo, setAutoScrollAtivo] = useState(false);
   const containerRef = useRef(null);
+
+  useEffect(() => {
+    const motionMedia = window.matchMedia(
+      "(prefers-reduced-motion: no-preference)",
+    );
+    const widthMedia = window.matchMedia("(min-width: 768px)");
+
+    function atualizarAutoScroll() {
+      setAutoScrollAtivo(motionMedia.matches && widthMedia.matches);
+    }
+
+    atualizarAutoScroll();
+
+    motionMedia.addEventListener("change", atualizarAutoScroll);
+    widthMedia.addEventListener("change", atualizarAutoScroll);
+
+    return () => {
+      motionMedia.removeEventListener("change", atualizarAutoScroll);
+      widthMedia.removeEventListener("change", atualizarAutoScroll);
+    };
+  }, []);
 
   useEffect(() => {
     setDestaques(destaquesRecebidos);
@@ -73,7 +95,7 @@ export default function CarrosselDestaques({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || destaques.length <= 1) {
+    if (!container || destaques.length <= 1 || !autoScrollAtivo) {
       return undefined;
     }
 
@@ -95,7 +117,7 @@ export default function CarrosselDestaques({
     frame = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(frame);
-  }, [isDragging, destaques]);
+  }, [isDragging, destaques, autoScrollAtivo]);
 
   function scrollToProduto(id) {
     const el = document.getElementById(`produto-${id}`);
@@ -115,13 +137,7 @@ export default function CarrosselDestaques({
   const cards = destaques.length > 1 ? [...destaques, ...destaques] : destaques;
 
   return (
-    <motion.section
-      className="mb-3"
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.22 }}
-      transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
-    >
+    <section className="mb-3">
       <div
         ref={containerRef}
         className="scrollbar-hide overflow-x-auto pb-3 pt-1 select-none"
@@ -145,25 +161,18 @@ export default function CarrosselDestaques({
           }}
         >
           {cards.map((produto, idx) => (
-            <motion.div
+            <div
               key={produto.id + "-" + idx}
               className="group relative flex h-64 min-w-[244px] cursor-pointer items-end overflow-hidden rounded-[1.4rem] border border-[#d8cab8] bg-[#201711] shadow-[0_10px_28px_rgba(33,19,12,0.2)] transition hover:-translate-y-0.5"
               onClick={() => scrollToProduto(produto.id)}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.32, delay: (idx % 6) * 0.045 }}
-              whileHover={{
-                y: -7,
-                scale: 1.02,
-                boxShadow: "0 20px 44px rgba(18,10,6,0.35)",
-              }}
-              whileTap={{ scale: 0.985 }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={produto.imagem_url}
                 alt={produto.nome}
+                fill
+                sizes="(max-width: 768px) 70vw, 244px"
+                quality={55}
+                loading="lazy"
                 className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
               />
               <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
@@ -182,10 +191,10 @@ export default function CarrosselDestaques({
                   R$ {produto.preco}
                 </p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
-    </motion.section>
+    </section>
   );
 }

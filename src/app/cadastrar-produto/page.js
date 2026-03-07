@@ -1,26 +1,45 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import imageCompression from 'browser-image-compression';
+"use client";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import imageCompression from "browser-image-compression";
+
+const IMAGE_UPLOAD_OPTIONS = {
+  maxSizeMB: 0.35,
+  maxWidthOrHeight: 1200,
+  initialQuality: 0.82,
+  useWebWorker: true,
+  fileType: "image/webp",
+};
+
+const IMAGE_CACHE_CONTROL = "31536000";
 
 export default function CadastrarProduto() {
   const [form, setForm] = useState({
-    nome: '', descricao: '', preco: '', categoria_id: '', imagem: null, destaque: false, disponivel: true
+    nome: "",
+    descricao: "",
+    preco: "",
+    categoria_id: "",
+    imagem: null,
+    destaque: false,
+    disponivel: true,
   });
   const [categorias, setCategorias] = useState([]);
-  const [mensagem, setMensagem] = useState('');
+  const [mensagem, setMensagem] = useState("");
   const [loading, setLoading] = useState(false);
   const [autenticado, setAutenticado] = useState(false);
-  const [toast, setToast] = useState({ show: false, text: '', color: 'green' });
+  const [toast, setToast] = useState({ show: false, text: "", color: "green" });
 
   useEffect(() => {
     async function verificarLogin() {
       const { data } = await supabase.auth.getUser();
       if (data?.user) setAutenticado(true);
-      else window.location.href = '/login';
+      else window.location.href = "/login";
     }
     async function fetchCategorias() {
-      const { data } = await supabase.from('categorias').select('*').order('nome');
+      const { data } = await supabase
+        .from("categorias")
+        .select("*")
+        .order("nome");
       setCategorias(data || []);
     }
     verificarLogin();
@@ -39,64 +58,84 @@ export default function CadastrarProduto() {
   async function handleImage(e) {
     const file = e.target.files[0];
     if (!file) return;
-    const options = {
-      maxSizeMB: 0.5,
-      maxWidthOrHeight: 800,
-      useWebWorker: true,
-      fileType: 'image/webp'
-    };
-    const compressedFile = await imageCompression(file, options);
+    const compressedFile = await imageCompression(file, IMAGE_UPLOAD_OPTIONS);
     setForm({ ...form, imagem: compressedFile });
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
-    let imagem_url = '';
+    let imagem_url = "";
     if (form.imagem) {
       // Remove caracteres especiais e acentos
-      const nomeLimpo = form.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '');
+      const nomeLimpo = form.nome
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "");
       const fileName = `${Date.now()}-${nomeLimpo}.webp`;
       const { error } = await supabase.storage
-        .from('produtos')
-        .upload(fileName, form.imagem, { contentType: 'image/webp' });
+        .from("produtos")
+        .upload(fileName, form.imagem, {
+          contentType: "image/webp",
+          cacheControl: IMAGE_CACHE_CONTROL,
+          upsert: false,
+        });
       if (error) {
-        setMensagem('Erro ao enviar imagem: ' + error.message);
+        setMensagem("Erro ao enviar imagem: " + error.message);
         setLoading(false);
         return;
       }
-      imagem_url = supabase.storage.from('produtos').getPublicUrl(fileName).data.publicUrl;
+      imagem_url = supabase.storage.from("produtos").getPublicUrl(fileName)
+        .data.publicUrl;
     }
-    const { error: err } = await supabase
-      .from('produtos')
-      .insert([{
+    const { error: err } = await supabase.from("produtos").insert([
+      {
         nome: form.nome,
         descricao: form.descricao,
         preco: form.preco,
         categoria_id: form.categoria_id,
         imagem_url,
         destaque: form.destaque,
-        disponivel: form.disponivel
-      }]);
+        disponivel: form.disponivel,
+      },
+    ]);
     setLoading(false);
     if (err) {
-      setMensagem('Erro ao cadastrar: ' + err.message);
-      setToast({ show: true, text: 'Erro ao cadastrar: ' + err.message, color: 'red' });
+      setMensagem("Erro ao cadastrar: " + err.message);
+      setToast({
+        show: true,
+        text: "Erro ao cadastrar: " + err.message,
+        color: "red",
+      });
     } else {
-      setMensagem('Produto cadastrado com sucesso! 💍');
-      setToast({ show: true, text: 'Produto cadastrado com sucesso! 💍', color: 'green' });
-      setForm({ nome: '', descricao: '', preco: '', categoria_id: '', imagem: null, destaque: false, disponivel: true });
+      setMensagem("Produto cadastrado com sucesso! 💍");
+      setToast({
+        show: true,
+        text: "Produto cadastrado com sucesso! 💍",
+        color: "green",
+      });
+      setForm({
+        nome: "",
+        descricao: "",
+        preco: "",
+        categoria_id: "",
+        imagem: null,
+        destaque: false,
+        disponivel: true,
+      });
     }
   }
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
+    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
   }
 
   return (
     <div className="max-w-md mx-auto mt-16 p-8 bg-white rounded-xl shadow-lg border border-gray-200">
-      <h2 className="text-3xl font-bold mb-6 text-center text-[#7b1e3a] font-serif">Cadastrar Produto</h2>
+      <h2 className="text-3xl font-bold mb-6 text-center text-[#7b1e3a] font-serif">
+        Cadastrar Produto
+      </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           name="nome"
@@ -132,8 +171,10 @@ export default function CadastrarProduto() {
           className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#7b1e3a] focus:ring-2 focus:ring-[#7b1e3a]/30 outline-none transition font-medium"
         >
           <option value="">Selecione a categoria</option>
-          {categorias.map(cat => (
-            <option key={cat.id} value={cat.id}>{cat.nome}</option>
+          {categorias.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.nome}
+            </option>
           ))}
         </select>
         {/* Campo de upload de foto estilizado */}
@@ -143,8 +184,19 @@ export default function CadastrarProduto() {
             className="flex items-center gap-2 px-6 py-3 bg-[#7b1e3a] text-white rounded-full font-semibold shadow hover:bg-black transition cursor-pointer"
             style={{ minWidth: 180 }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+              />
               <circle cx="12" cy="13" r="4" />
             </svg>
             Adicionar Foto
@@ -166,11 +218,21 @@ export default function CadastrarProduto() {
           )}
         </div>
         <label className="flex items-center gap-2">
-          <input type="checkbox" name="destaque" checked={form.destaque} onChange={handleChange} />
+          <input
+            type="checkbox"
+            name="destaque"
+            checked={form.destaque}
+            onChange={handleChange}
+          />
           <span className="text-[#7b1e3a] font-medium">Destaque</span>
         </label>
         <label className="flex items-center gap-2">
-          <input type="checkbox" name="disponivel" checked={form.disponivel} onChange={handleChange} />
+          <input
+            type="checkbox"
+            name="disponivel"
+            checked={form.disponivel}
+            onChange={handleChange}
+          />
           <span className="text-[#7b1e3a] font-medium">Disponível</span>
         </label>
         <button
@@ -178,14 +240,16 @@ export default function CadastrarProduto() {
           className="w-full bg-[#7b1e3a] text-white px-6 py-3 rounded-full font-semibold hover:bg-black transition"
           disabled={loading}
         >
-          {loading ? 'Enviando...' : 'Cadastrar'}
+          {loading ? "Enviando..." : "Cadastrar"}
         </button>
       </form>
       {toast.show && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl px-8 py-6 text-center border border-gray-200 max-w-sm w-full">
-            <h4 className={`text-lg font-bold mb-2 ${toast.color === 'green' ? 'text-green-600' : 'text-red-600'}`}>
-              {toast.color === 'green' ? 'Sucesso!' : 'Erro'}
+            <h4
+              className={`text-lg font-bold mb-2 ${toast.color === "green" ? "text-green-600" : "text-red-600"}`}
+            >
+              {toast.color === "green" ? "Sucesso!" : "Erro"}
             </h4>
             <p className="mb-4">{toast.text}</p>
             <button

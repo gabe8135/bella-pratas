@@ -5,6 +5,7 @@ import CarrosselDestaques from "./components/CarrosselDestaques";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import {
   ArrowUp,
   ArrowUpRight,
@@ -21,12 +22,10 @@ const WHATSAPP_NUMBER = "5513997033980";
 const animationEase = [0.22, 1, 0.36, 1];
 
 const sectionVariants = {
-  hidden: { opacity: 0, y: 34, scale: 0.985, filter: "blur(5px)" },
+  hidden: { opacity: 0, y: 34 },
   show: {
     opacity: 1,
     y: 0,
-    scale: 1,
-    filter: "blur(0px)",
     transition: {
       duration: 0.68,
       ease: animationEase,
@@ -37,12 +36,10 @@ const sectionVariants = {
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20, scale: 0.985, filter: "blur(5px)" },
+  hidden: { opacity: 0, y: 20 },
   show: {
     opacity: 1,
     y: 0,
-    scale: 1,
-    filter: "blur(0px)",
     transition: {
       duration: 0.56,
       ease: animationEase,
@@ -655,8 +652,8 @@ export default function Home() {
       <motion.section
         id="catalogo"
         className="mt-10"
-        initial={{ opacity: 1, y: 14, filter: "blur(1.2px)" }}
-        whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        initial={{ opacity: 1, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.1 }}
         transition={{ duration: 0.58, ease: animationEase }}
       >
@@ -700,8 +697,8 @@ export default function Home() {
               <motion.article
                 key={produto.id}
                 id={`produto-${produto.id}`}
-                initial={{ opacity: 0, y: 20, scale: 0.985 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{
                   duration: 0.44,
                   delay: getWaveDelay(index),
@@ -710,7 +707,6 @@ export default function Home() {
                 className="group luxury-surface rounded-[1.5rem] p-3"
                 whileHover={{
                   y: -8,
-                  scale: 1.012,
                   boxShadow: "0 28px 56px rgba(34,18,10,0.2)",
                 }}
                 whileTap={{ scale: 0.992 }}
@@ -721,12 +717,17 @@ export default function Home() {
                   className="w-full text-left"
                 >
                   <div className="relative overflow-hidden rounded-2xl border border-[#e3d6c4] bg-white">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={produto.imagem_url}
-                      alt={produto.nome}
-                      className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105"
-                    />
+                    <div className="relative aspect-square w-full">
+                      <Image
+                        src={produto.imagem_url}
+                        alt={produto.nome}
+                        fill
+                        sizes="(max-width: 640px) 90vw, (max-width: 1024px) 46vw, 32vw"
+                        quality={60}
+                        loading="lazy"
+                        className="object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    </div>
                     <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
                       <span className="luxury-soft-shimmer absolute inset-y-0 -left-1/2 w-1/2" />
                     </div>
@@ -856,10 +857,13 @@ export default function Home() {
               {produtoSelecionado && (
                 <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr] md:items-start">
                   <div className="overflow-hidden rounded-[1.4rem] border border-[#e3d6c4] bg-white">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={produtoSelecionado.imagem_url}
                       alt={produtoSelecionado.nome}
+                      width={920}
+                      height={920}
+                      sizes="(max-width: 768px) 92vw, 55vw"
+                      quality={75}
                       className="h-full max-h-[520px] w-full object-cover"
                     />
                   </div>
