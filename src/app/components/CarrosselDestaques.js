@@ -17,7 +17,10 @@ export default function CarrosselDestaques({
   const retomarAutoScrollRef = useRef(0);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       setAutoScrollAtivo(false);
       return undefined;
     }
@@ -169,8 +172,7 @@ export default function CarrosselDestaques({
 
       if (podeAutoScroll) {
         // Normaliza velocidade para comportar igual em 60hz/120hz.
-        const deslocamento =
-          (autoScrollVelocidade * delta) / (1000 / 60);
+        const deslocamento = (autoScrollVelocidade * delta) / (1000 / 60);
         container.scrollLeft += deslocamento;
 
         if (container.scrollLeft >= container.scrollWidth / 2) {
