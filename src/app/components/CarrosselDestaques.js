@@ -11,7 +11,10 @@ export default function CarrosselDestaques({
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [autoScrollAtivo, setAutoScrollAtivo] = useState(false);
+  const [autoScrollVelocidade, setAutoScrollVelocidade] = useState(0.26);
+  const [retomarAutoScrollMs, setRetomarAutoScrollMs] = useState(1100);
   const containerRef = useRef(null);
+  const retomarAutoScrollRef = useRef(0);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -20,11 +23,33 @@ export default function CarrosselDestaques({
     }
 
     const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const widthMedia = window.matchMedia("(min-width: 768px)");
+    const desktopMedia = window.matchMedia("(min-width: 1024px)");
+    const tabletMedia = window.matchMedia(
+      "(min-width: 640px) and (max-width: 1023px)",
+    );
 
     function atualizarAutoScroll() {
       // On browsers without prefers-reduced-motion support, `matches` stays false.
-      setAutoScrollAtivo(!motionMedia.matches && widthMedia.matches);
+      const reduzirMovimento = motionMedia.matches;
+
+      if (desktopMedia.matches) {
+        setAutoScrollAtivo(!reduzirMovimento);
+        setAutoScrollVelocidade(0.44);
+        setRetomarAutoScrollMs(700);
+        return;
+      }
+
+      if (tabletMedia.matches) {
+        setAutoScrollAtivo(!reduzirMovimento);
+        setAutoScrollVelocidade(0.32);
+        setRetomarAutoScrollMs(900);
+        return;
+      }
+
+      // Mobile: mais suave para nao competir com swipe/touch.
+      setAutoScrollAtivo(!reduzirMovimento);
+      setAutoScrollVelocidade(0.24);
+      setRetomarAutoScrollMs(1200);
     }
 
     function registrarListener(mediaQueryList, callback) {
@@ -48,14 +73,19 @@ export default function CarrosselDestaques({
       motionMedia,
       atualizarAutoScroll,
     );
-    const removerWidthListener = registrarListener(
-      widthMedia,
+    const removerDesktopListener = registrarListener(
+      desktopMedia,
+      atualizarAutoScroll,
+    );
+    const removerTabletListener = registrarListener(
+      tabletMedia,
       atualizarAutoScroll,
     );
 
     return () => {
       removerMotionListener();
-      removerWidthListener();
+      removerDesktopListener();
+      removerTabletListener();
     };
   }, []);
 
@@ -114,8 +144,9 @@ export default function CarrosselDestaques({
     }
 
     setIsDragging(false);
+    retomarAutoScrollRef.current = performance.now() + retomarAutoScrollMs;
     container.style.cursor = "grab";
-    container.style.scrollBehavior = "smooth";
+    container.style.scrollBehavior = "auto";
   }
 
   useEffect(() => {
@@ -125,14 +156,25 @@ export default function CarrosselDestaques({
     }
 
     let frame;
-    const speed = 0.45;
+    let ultimoFrameTime = 0;
 
-    function animate() {
-      if (!isDragging) {
-        container.scrollLeft += speed;
+    function animate(now) {
+      if (!ultimoFrameTime) {
+        ultimoFrameTime = now;
+      }
+
+      const delta = now - ultimoFrameTime;
+      ultimoFrameTime = now;
+      const podeAutoScroll = !isDragging && now >= retomarAutoScrollRef.current;
+
+      if (podeAutoScroll) {
+        // Normaliza velocidade para comportar igual em 60hz/120hz.
+        const deslocamento =
+          (autoScrollVelocidade * delta) / (1000 / 60);
+        container.scrollLeft += deslocamento;
 
         if (container.scrollLeft >= container.scrollWidth / 2) {
-          container.scrollLeft = 0;
+          container.scrollLeft -= container.scrollWidth / 2;
         }
       }
 
@@ -142,7 +184,7 @@ export default function CarrosselDestaques({
     frame = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(frame);
-  }, [isDragging, destaques, autoScrollAtivo]);
+  }, [isDragging, destaques, autoScrollAtivo, autoScrollVelocidade]);
 
   function scrollToProduto(id) {
     const el = document.getElementById(`produto-${id}`);
