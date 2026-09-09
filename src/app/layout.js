@@ -1,33 +1,32 @@
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import { Cormorant_Garamond, Outfit } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+const outfit = localFont({
+  src: "../../public/fonts/outfit-latin.woff2",
+  weight: "100 900",
   display: "swap",
   variable: "--font-outfit",
 });
-
-const cormorantGaramond = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+const cormorant = localFont({
+  src: "../../public/fonts/cormorant-garamond-latin.woff2",
+  weight: "300 700",
   display: "swap",
   variable: "--font-cormorant",
 });
-
+export const metadata = {
+  title: "Bella Pratas | Detalhes que ficam",
+  description: "Descubra joias cheias de significado na Bella Pratas. Encontre sua peça favorita e compre pelo WhatsApp.",
+};
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-      </head>
-      <body
-        className={`${outfit.variable} ${cormorantGaramond.variable} min-h-screen flex flex-col text-[#201915]`}
-      >
+      <body className={`${outfit.variable} ${cormorant.variable}`}>
+        <a className="skip-link" href="#conteudo">
+          Pular para o conteúdo
+        </a>
         <Header />
-        <main className="flex-1">{children}</main>
+        <main id="conteudo">{children}</main>
         <Footer />
       </body>
     </html>

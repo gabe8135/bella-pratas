@@ -1,921 +1,414 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import CarrosselDestaques from "./components/CarrosselDestaques";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import * as Dialog from "@radix-ui/react-dialog";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState, useSyncExternalStore } from "react";
 import Image from "next/image";
+import { motion, MotionConfig, useReducedMotion } from "framer-motion";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
-  ArrowUp,
+  ArrowDown,
   ArrowUpRight,
-  ChevronRight,
-  Gem,
+  ArrowRight,
+  Heart,
   Search,
-  ShieldCheck,
-  Sparkles,
-  TrendingUp,
   X,
+  Sparkles,
+  Gem,
+  Sun,
+  Droplets,
+  Box,
 } from "lucide-react";
-
-const WHATSAPP_NUMBER = "5513997033980";
-const animationEase = [0.22, 1, 0.36, 1];
-
-const sectionVariants = {
-  hidden: { opacity: 0, y: 34 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.68,
-      ease: animationEase,
-      when: "beforeChildren",
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.56,
-      ease: animationEase,
-    },
-  },
-};
-
-const inViewProps = {
-  initial: "hidden",
-  whileInView: "show",
-  viewport: { once: true, amount: 0.18 },
-};
-
-const filterOverlayVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      duration: 0.24,
-      ease: animationEase,
-    },
-  },
-  exit: {
-    opacity: 0,
-    transition: {
-      duration: 0.2,
-      ease: animationEase,
-    },
-  },
-};
-
-const filterPanelVariants = {
-  hidden: { opacity: 0, x: -28, y: 12, scale: 0.96 },
-  show: {
-    opacity: 1,
-    x: 0,
-    y: 0,
-    scale: 1,
-    transition: {
-      duration: 0.34,
-      ease: animationEase,
-      when: "beforeChildren",
-      staggerChildren: 0.045,
-      delayChildren: 0.06,
-    },
-  },
-  exit: {
-    opacity: 0,
-    x: -24,
-    y: 10,
-    scale: 0.96,
-    transition: {
-      duration: 0.2,
-      ease: animationEase,
-    },
-  },
-};
-
-const filterItemVariants = {
-  hidden: { opacity: 0, x: -12 },
-  show: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      duration: 0.26,
-      ease: animationEase,
-    },
-  },
-};
-
-const ctaButtonMotion = {
-  whileHover: { y: -3, scale: 1.02 },
-  whileTap: { scale: 0.98 },
-  transition: { duration: 0.25, ease: animationEase },
-};
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
-function buildWhatsappLink(nomeProduto) {
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Oi! Gostaria de saber mais sobre ${nomeProduto}.`)}`;
+import { products, categories } from "@/lib/products";
+import GlareButton from "@/components/GlareButton";
+function productWhatsappUrl(product) {
+  const message = `Olá! Vi a peça ${product.name} no site da Bella Pratas e gostaria de comprar. Pode me informar o valor e a disponibilidade?`;
+  return `https://wa.me/5513997033980?text=${encodeURIComponent(message)}`;
 }
-
-function formatCurrency(value) {
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return `R$ ${value}`;
-  }
-  return currencyFormatter.format(numericValue);
+const desktopQuery = "(min-width: 1024px)";
+function subscribeDesktop(callback) {
+  const query = window.matchMedia(desktopQuery);
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
 }
-
-export default function Home() {
-  const [produtos, setProdutos] = useState([]);
-  const [destaques, setDestaques] = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [categoriaFiltro, setCategoriaFiltro] = useState("");
-  const [produtoSelecionado, setProdutoSelecionado] = useState(null);
-  const [busca, setBusca] = useState("");
-  const [carregandoProdutos, setCarregandoProdutos] = useState(true);
-  const [filtroLateralAberto, setFiltroLateralAberto] = useState(false);
-  const [gridColumns, setGridColumns] = useState(1);
-
-  useEffect(() => {
-    function atualizarGridColumns() {
-      if (window.matchMedia("(min-width: 1024px)").matches) {
-        setGridColumns(3);
-      } else if (window.matchMedia("(min-width: 640px)").matches) {
-        setGridColumns(2);
-      } else {
-        setGridColumns(1);
-      }
-    }
-
-    atualizarGridColumns();
-    window.addEventListener("resize", atualizarGridColumns);
-
-    return () => {
-      window.removeEventListener("resize", atualizarGridColumns);
-    };
-  }, []);
-
-  useEffect(() => {
-    let ativo = true;
-
-    async function carregarBase() {
-      const [resCategorias, resDestaques] = await Promise.all([
-        supabase.from("categorias").select("*").order("nome"),
-        supabase
-          .from("produtos")
-          .select("*, categorias(nome)")
-          .eq("destaque", true)
-          .eq("disponivel", true)
-          .order("id", { ascending: false }),
-      ]);
-
-      if (!ativo) {
-        return;
-      }
-
-      setCategorias(resCategorias.data || []);
-      setDestaques(resDestaques.data || []);
-    }
-
-    carregarBase();
-
-    return () => {
-      ativo = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let ativo = true;
-
-    async function carregarProdutos() {
-      setCarregandoProdutos(true);
-
-      let query = supabase
-        .from("produtos")
-        .select("*, categorias(nome)")
-        .eq("disponivel", true)
-        .order("id", { ascending: false });
-
-      if (categoriaFiltro) {
-        query = query.eq("categoria_id", categoriaFiltro);
-      }
-
-      const { data } = await query;
-
-      if (!ativo) {
-        return;
-      }
-
-      setProdutos(data || []);
-      setCarregandoProdutos(false);
-    }
-
-    carregarProdutos();
-
-    return () => {
-      ativo = false;
-    };
-  }, [categoriaFiltro]);
-
-  const produtosFiltrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-
-    if (!termo) {
-      return produtos;
-    }
-
-    return produtos.filter((produto) =>
-      [produto.nome, produto.descricao, produto.categorias?.nome]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(termo)),
-    );
-  }, [busca, produtos]);
-
-  const nomeCategoriaAtiva = categorias.find(
-    (categoria) => String(categoria.id) === categoriaFiltro,
-  )?.nome;
-  const resumoCategoria = nomeCategoriaAtiva
-    ? `Agora voce esta navegando por ${nomeCategoriaAtiva}.`
-    : "Todas as categorias liberadas para voce explorar sem limite.";
-
-  function scrollToCatalog() {
-    const secaoCatalogo = document.getElementById("catalogo");
-    if (secaoCatalogo) {
-      secaoCatalogo.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }
-
-  function aplicarCategoriaRapida(categoriaId) {
-    setCategoriaFiltro(categoriaId);
-    setFiltroLateralAberto(false);
-    scrollToCatalog();
-  }
-
-  function alternarFiltroLateral() {
-    setFiltroLateralAberto((prev) => !prev);
-  }
-
-  function getWaveDelay(index) {
-    const totalColunas = Math.max(gridColumns, 1);
-    const linha = Math.floor(index / totalColunas);
-    const coluna = index % totalColunas;
-
-    // Alterna a direção por linha para criar uma onda horizontal elegante.
-    const colunaNaOnda = linha % 2 === 0 ? coluna : totalColunas - 1 - coluna;
-    const delayLinha = linha * 0.13;
-    const delayColuna = colunaNaOnda * 0.06;
-
-    return delayLinha + delayColuna;
-  }
-
+const getDesktop = () => window.matchMedia(desktopQuery).matches;
+const getServerDesktop = () => false;
+function Reveal({ children, className = "" }) {
   return (
-    <div className="relative mx-auto w-full max-w-7xl px-4 pb-24 pt-8 sm:px-6">
-      <motion.button
-        type="button"
-        onClick={alternarFiltroLateral}
-        className="filter-triangle-trigger fixed left-0 top-1/2 z-50 flex h-24 w-14 -translate-y-1/2 items-center justify-center border-y border-r border-[#d8c2a6] text-[#4a362a]"
-        initial={{ x: -24, opacity: 0 }}
-        animate={{
-          x: 0,
-          opacity: 1,
-          filter: filtroLateralAberto
-            ? "drop-shadow(0 0 10px rgba(171,131,88,0.52))"
-            : "drop-shadow(0 0 0 rgba(171,131,88,0))",
-        }}
-        whileHover={{ x: 4, scale: 1.04 }}
-        whileTap={{ scale: 0.94 }}
-        transition={{ duration: 0.26, ease: animationEase }}
-        aria-label="Alternar filtro de categorias"
-      >
-        <motion.span
-          className="filter-triangle-icon"
-          animate={{
-            rotate: filtroLateralAberto ? 180 : 0,
-            x: filtroLateralAberto ? -2 : 0,
-          }}
-          transition={{ duration: 0.34, ease: animationEase }}
-        >
-          <ChevronRight className="h-6 w-6 drop-shadow-[0_2px_6px_rgba(28,15,7,0.35)]" />
-        </motion.span>
-      </motion.button>
-
-      <AnimatePresence>
-        {filtroLateralAberto && (
-          <>
-            <motion.button
-              variants={filterOverlayVariants}
-              initial="hidden"
-              animate="show"
-              exit="exit"
-              type="button"
-              onClick={() => setFiltroLateralAberto(false)}
-              aria-label="Fechar painel de categorias"
-              className="fixed inset-0 z-40 bg-[#130d09]/46 backdrop-blur-sm"
-            />
-
-            <motion.aside
-              variants={filterPanelVariants}
-              initial="hidden"
-              animate="show"
-              exit="exit"
-              className="fixed z-50 overflow-hidden rounded-[1.5rem] border border-[#d6c2a8] bg-[#fdf7ee]/97 p-3 shadow-[0_26px_70px_rgba(34,18,10,0.32)] xl:left-4 xl:top-24 xl:w-60 max-xl:bottom-20 max-xl:left-3 max-xl:right-3"
-            >
-              <div className="luxury-soft-shimmer pointer-events-none absolute inset-x-0 top-0 h-[2px]" />
-              <motion.div
-                className="mb-2 flex items-center justify-between px-1"
-                variants={filterItemVariants}
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#70533b]">
-                  Filtro rapido
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setFiltroLateralAberto(false)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#d8c3a7] text-[#5a4336] hover:bg-white"
-                  aria-label="Fechar"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </motion.div>
-
-              <div className="max-h-[50vh] space-y-1 overflow-y-auto pr-1 xl:max-h-[55vh]">
-                <motion.button
-                  layout
-                  variants={filterItemVariants}
-                  whileHover={{ scale: 1.012, x: 1 }}
-                  whileTap={{ scale: 0.985 }}
-                  type="button"
-                  onClick={() => aplicarCategoriaRapida("")}
-                  className="relative w-full overflow-hidden rounded-lg bg-white/85 px-3 py-2 text-left text-sm font-medium transition"
-                >
-                  {!categoriaFiltro && (
-                    <motion.span
-                      layoutId="categoria-filtro-ativo"
-                      className="absolute inset-0 rounded-lg bg-[#251a15]"
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 38,
-                      }}
-                    />
-                  )}
-                  <span
-                    className={`relative z-10 ${!categoriaFiltro ? "text-[#f8ecde]" : "text-[#5c4438]"}`}
-                  >
-                    Todas as categorias
-                  </span>
-                </motion.button>
-
-                {categorias.map((categoria) => {
-                  const ativo = String(categoria.id) === categoriaFiltro;
-
-                  return (
-                    <motion.button
-                      key={categoria.id}
-                      layout
-                      variants={filterItemVariants}
-                      whileHover={{ scale: 1.012, x: 1 }}
-                      whileTap={{ scale: 0.985 }}
-                      type="button"
-                      onClick={() =>
-                        aplicarCategoriaRapida(String(categoria.id))
-                      }
-                      className="relative w-full overflow-hidden rounded-lg bg-white/85 px-3 py-2 text-left text-sm font-medium transition"
-                    >
-                      {ativo && (
-                        <motion.span
-                          layoutId="categoria-filtro-ativo"
-                          className="absolute inset-0 rounded-lg bg-[#251a15]"
-                          transition={{
-                            type: "spring",
-                            stiffness: 500,
-                            damping: 38,
-                          }}
-                        />
-                      )}
-
-                      <span
-                        className={`relative z-10 ${ativo ? "text-[#f8ecde]" : "text-[#5c4438]"}`}
-                      >
-                        {categoria.nome}
-                      </span>
-                    </motion.button>
-                  );
-                })}
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: 0.65 }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+export default function Home() {
+  const desktop = useSyncExternalStore(subscribeDesktop, getDesktop, getServerDesktop);
+  const reducedMotion = useReducedMotion();
+  const [category, setCategory] = useState("Todas");
+  const [search, setSearch] = useState("");
+  const [favorites, setFavorites] = useState([]);
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const normalized = (value) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  const filtered = products.filter(
+    (p) =>
+      (category === "Todas" || p.category === category) &&
+      normalized(p.name + " " + p.category).includes(normalized(search)) &&
+      (!onlyFavorites || favorites.includes(p.id)),
+  );
+  const visible = expanded ? filtered : filtered.slice(0, 8);
+  const favorite = (id) =>
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  return (
+    <MotionConfig reducedMotion="user">
+      <div id="inicio">
+        <section className="hero">
+          <div className="hero-copy">
+            <Reveal>
+              <span className="eyebrow">
+                <span className="tiny-line" /> O EXTRAORDINÁRIO ESTÁ NOS DETALHES
+              </span>
+              <h1>
+                Feita de prata.
+                <br />
+                Cheia de <em>você.</em>
+              </h1>
+              <p>
+                Joias que não pedem uma ocasião especial.
+                <br className="desktop-break" /> Elas fazem de cada dia uma.
+              </p>
+              <GlareButton as="a" href="#colecao" className="button button-dark">
+                Descubra a coleção <ArrowUpRight size={18} />
+              </GlareButton>
+              <div className="hero-footnote">
+                <span className="mini-star">✳</span>
+                <span>
+                  Leve no toque.
+                  <br />
+                  <strong>Eterna no significado.</strong>
+                </span>
               </div>
-
-              <motion.p
-                className="mt-3 px-1 text-[11px] leading-relaxed text-[#7d6352]"
-                variants={filterItemVariants}
-              >
-                Selecione uma categoria e o catalogo sera reposicionado
-                automaticamente.
-              </motion.p>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
-      <motion.section
-        id="inicio"
-        className="luxury-surface relative overflow-hidden rounded-[2rem] px-6 py-10 sm:px-10"
-        variants={sectionVariants}
-        initial="hidden"
-        animate="show"
-      >
-        <motion.div
-          className="pointer-events-none absolute -left-20 top-10 h-44 w-44 rounded-full bg-[#9b7544]/18 blur-3xl"
-          animate={{ y: [0, -12, 0], scale: [1, 1.06, 1] }}
-          transition={{ duration: 8.8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-[#7e3147]/18 blur-3xl"
-          animate={{ y: [0, 14, 0], scale: [1, 1.04, 1] }}
-          transition={{
-            duration: 9.4,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 0.35,
-          }}
-        />
-        <motion.div
-          className="pointer-events-none absolute left-[28%] top-[62%] h-44 w-44 rounded-full border border-[#b98f5c]/20"
-          animate={{ rotate: [0, 8, 0], scale: [1, 1.03, 1] }}
-          transition={{ duration: 10.5, repeat: Infinity, ease: "easeInOut" }}
-        />
-
-        <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <motion.div variants={itemVariants}>
-            <span className="inline-flex rounded-full border border-[#b99260]/60 bg-white/80 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#7a5b3d]">
-              Curadoria premium em Prata 925
-            </span>
-            <h1 className="luxury-title mt-4 text-4xl font-semibold leading-[1.05] text-[#241b16] sm:text-6xl">
-              Pratas que encantam no primeiro olhar.
-            </h1>
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#4d3b32] sm:text-lg">
-              Escolha aneis, brincos, pulseiras e conjuntos em uma vitrine
-              desenhada para encantar, gerar desejo e acelerar o pedido no
-              WhatsApp.
-            </p>
-
-            <div className="mt-7 flex flex-wrap gap-3">
-              <motion.a
-                href="#catalogo"
-                className="inline-flex items-center gap-2 rounded-full bg-[#221813] px-6 py-3 text-sm font-semibold text-[#faefe1] transition hover:bg-black"
-                {...ctaButtonMotion}
-              >
-                Quero escolher minha peça
-                <ArrowUpRight className="h-4 w-4" />
-              </motion.a>
-              <motion.a
-                href="https://wa.me/5513997033980"
-                target="_blank"
-                rel="noopener"
-                className="inline-flex items-center rounded-full border border-[#c2a27c] bg-white/70 px-6 py-3 text-sm font-semibold text-[#5a4438] transition hover:bg-white"
-                {...ctaButtonMotion}
-              >
-                Falar com consultora
-              </motion.a>
+            </Reveal>
+          </div>
+          <div className="hero-photo">
+            <Image
+              src="/1752534044231-anel2.jpg"
+              alt="Anel de prata com detalhes Bali sobre tecido acetinado"
+              fill
+              priority
+              sizes="(max-width: 700px) 100vw, 55vw"
+            />
+            <div className="photo-top">
+              <span>THE EVERYDAY COLLECTION</span>
+              <span>ACERVO Nº 01</span>
             </div>
-          </motion.div>
-
-          <motion.div
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1"
-            variants={itemVariants}
-          >
-            <motion.div
-              className="luxury-surface rounded-3xl p-4"
-              variants={itemVariants}
-              whileHover={{
-                y: -6,
-                scale: 1.015,
-                boxShadow: "0 22px 38px rgba(40,22,8,0.16)",
-              }}
-              transition={{ duration: 0.26, ease: animationEase }}
-            >
-              <p className="text-xs uppercase tracking-[0.2em] text-[#7b5c42]">
-                Peças cadastradas
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-[#221813]">
-                {produtos.length}
-              </p>
-              <p className="mt-1 text-sm text-[#5f4a3f]">
-                Seleção pronta para compra imediata
-              </p>
-            </motion.div>
-            <motion.div
-              className="luxury-surface rounded-3xl p-4"
-              variants={itemVariants}
-              whileHover={{
-                y: -6,
-                scale: 1.015,
-                boxShadow: "0 22px 38px rgba(40,22,8,0.16)",
-              }}
-              transition={{ duration: 0.26, ease: animationEase }}
-            >
-              <p className="text-xs uppercase tracking-[0.2em] text-[#7b5c42]">
-                Categorias
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-[#221813]">
-                {categorias.length}
-              </p>
-              <p className="mt-1 text-sm text-[#5f4a3f]">
-                Navegação rápida para achar sua peça ideal
-              </p>
-            </motion.div>
-            <motion.div
-              className="luxury-surface rounded-3xl p-4 sm:col-span-2 lg:col-span-1"
-              variants={itemVariants}
-              whileHover={{
-                y: -6,
-                scale: 1.015,
-                boxShadow: "0 22px 38px rgba(40,22,8,0.16)",
-              }}
-              transition={{ duration: 0.26, ease: animationEase }}
-            >
-              <p className="text-xs uppercase tracking-[0.2em] text-[#7b5c42]">
-                Em destaque
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-[#221813]">
-                {destaques.length}
-              </p>
-              <p className="mt-1 text-sm text-[#5f4a3f]">
-                As peças mais pedidas pelas clientes
-              </p>
-            </motion.div>
-          </motion.div>
-        </div>
-      </motion.section>
-
-      <motion.section
-        id="destaques"
-        className="mt-14"
-        variants={sectionVariants}
-        {...inViewProps}
-      >
-        <motion.div
-          className="mb-5 flex flex-wrap items-end justify-between gap-3"
-          variants={itemVariants}
-        >
-          <div className="animate-float-in">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#7e5e41]">
-              Vitrine em movimento
-            </p>
-            <h2 className="luxury-title text-4xl font-semibold text-[#241b16]">
-              Destaques da semana
-            </h2>
+            <span className="photo-note">Um brilho só seu.</span>
+            <a className="photo-bottom" href="#colecao">
+              <span>UM NOVO OLHAR PARA O ESSENCIAL</span>
+              <span className="round-arrow">
+                <ArrowDown size={18} />
+              </span>
+            </a>
           </div>
-          <p className="max-w-md text-sm text-[#5f4a3f]">
-            Arraste para o lado e clique na peça que chamou sua atenção para
-            abrir o detalhe em segundos.
-          </p>
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <CarrosselDestaques destaques={destaques} />
-        </motion.div>
-      </motion.section>
-
-      <motion.section
-        id="categorias"
-        className="luxury-surface mt-12 rounded-[1.8rem] p-4 sm:p-6"
-        variants={sectionVariants}
-        {...inViewProps}
-      >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <motion.div className="space-y-2" variants={itemVariants}>
-            <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#7a5d43]">
-              <Sparkles className="h-4 w-4" />
-              Filtros inteligentes
-            </p>
-            <h2 className="luxury-title text-3xl font-semibold text-[#241b16]">
-              Encontre a joia certa em instantes
-            </h2>
-            <p className="text-sm text-[#5f4a3f]">{resumoCategoria}</p>
-          </motion.div>
-
-          <motion.label
-            className="relative w-full max-w-md"
-            variants={itemVariants}
-          >
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7c5d42]" />
-            <input
-              type="text"
-              value={busca}
-              onChange={(event) => setBusca(event.target.value)}
-              placeholder="Busque por anel, pulseira, descricao ou categoria"
-              className="w-full rounded-full border border-[#d7c5ae] bg-white/90 py-3 pl-11 pr-4 text-sm text-[#33251e] outline-none transition focus:border-[#9f7948]"
-            />
-          </motion.label>
+        </section>
+        <div className="values-strip">
+          <span>Beleza que acompanha você</span>
+          <Sparkles size={16} />
+          <span>Essência atemporal</span>
+          <Sparkles size={16} />
+          <span>Detalhes com significado</span>
+          <Sparkles size={16} />
+          <span>Sua próxima peça favorita</span>
         </div>
-
-        <motion.div variants={itemVariants}>
-          <Tabs value={categoriaFiltro || "todas"} className="mt-5 w-full">
-            <TabsList className="scrollbar-hide flex w-full flex-nowrap gap-2 overflow-x-auto rounded-full border border-[#dccdb9] bg-[#f9f3e9] p-2">
-              <TabsTrigger
-                value="todas"
-                onClick={() => setCategoriaFiltro("")}
-                className="rounded-full border border-transparent px-4 py-2 text-sm font-semibold text-[#6a4e39] data-[state=active]:border-[#2c211b] data-[state=active]:bg-[#2c211b] data-[state=active]:text-[#f5eadb]"
-              >
-                Todas
-              </TabsTrigger>
-              {categorias.map((categoria) => (
-                <TabsTrigger
-                  key={categoria.id}
-                  value={String(categoria.id)}
-                  onClick={() => setCategoriaFiltro(String(categoria.id))}
-                  className="rounded-full border border-transparent px-4 py-2 text-sm font-semibold text-[#6a4e39] data-[state=active]:border-[#2c211b] data-[state=active]:bg-[#2c211b] data-[state=active]:text-[#f5eadb]"
+        <section id="colecao" className="collection section-wrap">
+          <Reveal className="section-heading">
+            <div>
+              <span className="eyebrow">ESCOLHAS QUE DIZEM MUITO</span>
+              <h2>
+                Seu jeito de <em>brilhar.</em>
+              </h2>
+            </div>
+            <p>
+              Do primeiro detalhe à sua combinação favorita.
+              <br />
+              Encontre as peças que têm a ver com você.
+            </p>
+          </Reveal>
+          <div className="catalog-toolbar">
+            <div className="category-tabs" aria-label="Categorias">
+              {categories.map((c) => (
+                <GlareButton
+                  key={c}
+                  className={c === category ? "active" : ""}
+                  aria-pressed={c === category}
+                  onClick={() => {
+                    setCategory(c);
+                    setExpanded(false);
+                  }}
                 >
-                  {categoria.nome}
-                </TabsTrigger>
+                  {c}
+                </GlareButton>
               ))}
-            </TabsList>
-          </Tabs>
-        </motion.div>
-
-        <motion.p
-          className="mt-3 text-xs text-[#7e6553]"
-          variants={itemVariants}
-        >
-          Dica: use a seta lateral animada para abrir o painel e trocar de
-          categoria em segundos.
-        </motion.p>
-      </motion.section>
-
-      <motion.section
-        id="catalogo"
-        className="mt-10"
-        initial={{ opacity: 1, y: 14 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.1 }}
-        transition={{ duration: 0.58, ease: animationEase }}
-      >
-        <motion.div
-          className="mb-6 flex flex-wrap items-end justify-between gap-3"
-          variants={itemVariants}
-        >
-          <div className="animate-float-in">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7f6042]">
-              Colecao ativa
-            </p>
-            <h2 className="luxury-title text-4xl font-semibold text-[#241b16]">
-              Catalogo Bella Pratas
-            </h2>
-          </div>
-          <p className="inline-flex items-center gap-2 rounded-full border border-[#d5c1a7] bg-white/80 px-4 py-2 text-sm font-medium text-[#624938]">
-            <Gem className="h-4 w-4" />
-            {produtosFiltrados.length} item(ns) encontrado(s)
-          </p>
-        </motion.div>
-
-        {carregandoProdutos && (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className="luxury-surface animate-pulse rounded-[1.5rem] p-4"
+            </div>
+            <div className="search-controls">
+              <label className="search-field">
+                <Search size={16} />
+                <input
+                  aria-label="Buscar joias"
+                  placeholder="Encontre sua joia"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <GlareButton aria-label="Limpar busca" onClick={() => setSearch("")}>
+                    <X size={14} />
+                  </GlareButton>
+                )}
+              </label>
+              <GlareButton
+                className={`icon-button favorite-filter ${onlyFavorites ? "selected" : ""}`}
+                aria-label="Mostrar favoritos"
+                aria-pressed={onlyFavorites}
+                onClick={() => setOnlyFavorites(!onlyFavorites)}
               >
-                <div className="aspect-square rounded-2xl bg-[#e9dece]" />
-                <div className="mt-4 h-6 w-3/4 rounded bg-[#e9dece]" />
-                <div className="mt-2 h-4 w-full rounded bg-[#f0e7db]" />
-                <div className="mt-2 h-4 w-4/5 rounded bg-[#f0e7db]" />
-              </div>
-            ))}
+                <Heart size={18} fill={onlyFavorites ? "currentColor" : "none"} />
+                <span>{favorites.length}</span>
+              </GlareButton>
+            </div>
           </div>
-        )}
-
-        {!carregandoProdutos && produtosFiltrados.length > 0 && (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {produtosFiltrados.map((produto, index) => (
+          <div className="results-meta" aria-live="polite">
+            <span>
+              {filtered.length} {filtered.length === 1 ? "peça" : "peças"} para descobrir
+            </span>
+            <span>CURADORIA BELLA PRATAS</span>
+          </div>
+          <div className="product-grid">
+            {visible.map((p, i) => (
               <motion.article
-                key={produto.id}
-                id={`produto-${produto.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                key={p.id}
+                className="product-card"
+                initial={reducedMotion ? false : { opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, amount: 0.12 }}
                 transition={{
-                  duration: 0.44,
-                  delay: getWaveDelay(index),
-                  ease: animationEase,
+                  duration: reducedMotion ? 0 : 0.65,
+                  delay: desktop && !reducedMotion ? (i % 4) * 0.14 : 0,
                 }}
-                className="group luxury-surface rounded-[1.5rem] p-3"
-                whileHover={{
-                  y: -8,
-                  boxShadow: "0 28px 56px rgba(34,18,10,0.2)",
-                }}
-                whileTap={{ scale: 0.992 }}
               >
-                <button
-                  type="button"
-                  onClick={() => setProdutoSelecionado(produto)}
-                  className="w-full text-left"
-                >
-                  <div className="relative overflow-hidden rounded-2xl border border-[#e3d6c4] bg-white">
-                    <div className="relative aspect-square w-full">
-                      <Image
-                        src={produto.imagem_url}
-                        alt={produto.nome}
-                        fill
-                        sizes="(max-width: 640px) 90vw, (max-width: 1024px) 46vw, 32vw"
-                        quality={60}
-                        loading="lazy"
-                        className="object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
-                      <span className="luxury-soft-shimmer absolute inset-y-0 -left-1/2 w-1/2" />
-                    </div>
-                    <span className="absolute left-3 top-3 rounded-full bg-[#201711]/85 px-3 py-1 text-[11px] font-semibold text-[#f7ecde]">
-                      {produto.categorias?.nome || "Sem categoria"}
+                <div className="product-image">
+                  <GlareButton
+                    className="product-open"
+                    onClick={() => setSelected(p)}
+                    aria-label={`Ver detalhes de ${p.name}`}
+                  >
+                    <Image
+                      src={p.image}
+                      alt={p.name}
+                      fill
+                      sizes="(max-width: 700px) 50vw, (max-width: 1000px) 33vw, 25vw"
+                    />
+                    <span className="view-piece">
+                      Conheça a peça <ArrowUpRight size={16} />
                     </span>
-                  </div>
-
-                  <h3 className="luxury-title mt-4 text-3xl font-semibold leading-[1] text-[#2c2019]">
-                    {produto.nome}
-                  </h3>
-
-                  <p
-                    className="mt-2 text-sm leading-relaxed text-[#5d473b]"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                      minHeight: "2.7rem",
-                    }}
+                  </GlareButton>
+                  {i === 0 && <span className="product-tag">ESCOLHA BELLA</span>}
+                  <GlareButton
+                    className="favorite-button"
+                    aria-label={`${favorites.includes(p.id) ? "Remover" : "Adicionar"} ${p.name} ${favorites.includes(p.id) ? "dos" : "aos"} favoritos`}
+                    aria-pressed={favorites.includes(p.id)}
+                    onClick={() => favorite(p.id)}
                   >
-                    {produto.descricao || "Descricao indisponivel."}
-                  </p>
-                </button>
-
-                <div className="mt-4 flex items-center justify-between gap-2">
-                  <p className="text-lg font-semibold text-[#1e1512]">
-                    {formatCurrency(produto.preco)}
-                  </p>
-                  <motion.a
-                    href={buildWhatsappLink(produto.nome)}
-                    target="_blank"
-                    rel="noopener"
-                    className="inline-flex items-center rounded-full bg-[#7e3147] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#622437]"
-                    whileHover={{ y: -2, scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ duration: 0.2, ease: animationEase }}
-                  >
-                    Quero esta peca
-                  </motion.a>
+                    <Heart size={17} fill={favorites.includes(p.id) ? "currentColor" : "none"} />
+                  </GlareButton>
+                </div>
+                <div className="product-info">
+                  <span>{p.category}</span>
+                  <GlareButton onClick={() => setSelected(p)}>
+                    <h3>{p.name}</h3>
+                    <ArrowUpRight size={17} />
+                  </GlareButton>
                 </div>
               </motion.article>
             ))}
           </div>
-        )}
-
-        {!carregandoProdutos && produtosFiltrados.length === 0 && (
-          <div className="luxury-surface rounded-[1.8rem] p-10 text-center">
-            <p className="text-xl font-semibold text-[#3b2a21]">
-              Nenhuma peca foi encontrada com esse filtro.
-            </p>
-            <p className="mt-2 text-sm text-[#5f4a3f]">
-              Troque a categoria ou ajuste a busca para ver novas opcoes
-              disponiveis.
-            </p>
+          {!filtered.length && (
+            <div className="empty-state">
+              <Gem size={32} />
+              <h3>
+                {onlyFavorites ? "Sua seleção começa aqui." : "Ainda não encontramos essa joia."}
+              </h3>
+              <p>
+                {onlyFavorites
+                  ? "Toque no coração das peças que você ama."
+                  : "Experimente outro nome ou explore todas as categorias."}
+              </p>
+              <GlareButton
+                className="button button-outline"
+                onClick={() => {
+                  setSearch("");
+                  setCategory("Todas");
+                  setOnlyFavorites(false);
+                }}
+              >
+                Explorar a coleção <ArrowRight size={16} />
+              </GlareButton>
+            </div>
+          )}
+          {filtered.length > 8 && (
+            <div className="collection-more">
+              <GlareButton className="button button-outline" onClick={() => setExpanded(!expanded)}>
+                {expanded ? "Ver menos peças" : "Explore mais peças"}{" "}
+                <ArrowDown
+                  size={16}
+                  style={{ transform: expanded ? "rotate(180deg)" : undefined }}
+                />
+              </GlareButton>
+            </div>
+          )}
+        </section>
+        <section id="essencia" className="essence">
+          <div className="essence-photo">
+            <Image
+              src="/1752763227126-Pingentedepena.webp"
+              alt="Pingente de pena em prata sobre tecido claro"
+              fill
+              sizes="(max-width:700px) 100vw, 50vw"
+            />
+            <span>BELEZA EM SUA FORMA MAIS LEVE</span>
           </div>
-        )}
-      </motion.section>
-
-      <motion.a
-        href="#inicio"
-        aria-label="Voltar ao inicio"
-        className="fixed bottom-6 right-6 z-40 hidden h-11 w-11 items-center justify-center rounded-full border border-[#be9b73] bg-[#2a1e17] text-[#f7ebdc] shadow-lg transition hover:bg-black sm:inline-flex"
-        animate={{
-          y: [0, -3, 0],
-          boxShadow: [
-            "0 10px 24px rgba(30,18,10,0.2)",
-            "0 16px 28px rgba(30,18,10,0.28)",
-            "0 10px 24px rgba(30,18,10,0.2)",
-          ],
-        }}
-        transition={{ duration: 2.8, ease: "easeInOut", repeat: Infinity }}
-        whileHover={{ scale: 1.08, rotate: 6 }}
-        whileTap={{ scale: 0.94 }}
-      >
-        <ArrowUp className="h-4 w-4" />
-      </motion.a>
-
-      <motion.div
-        className="mt-14 grid gap-4 rounded-[1.8rem] border border-[#dcccb7] bg-[#fffaf1]/80 p-4 text-sm text-[#584335] sm:grid-cols-3 sm:p-6"
-        variants={sectionVariants}
-        {...inViewProps}
-      >
-        <p className="inline-flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-[#7e3147]" />
-          Copy e layout focados em aumentar interesse e pedidos.
-        </p>
-        <p className="inline-flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-[#7e3147]" />
-          Fluxo administrativo preservado com acesso seguro ao painel do dono.
-        </p>
-        <p className="inline-flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-[#7e3147]" />
-          Experiencia boutique, elegante e responsiva em qualquer tela.
-        </p>
-      </motion.div>
-
-      <Dialog.Root
-        open={Boolean(produtoSelecionado)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setProdutoSelecionado(null);
-          }
-        }}
-      >
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm" />
-          <Dialog.Content className="fixed inset-0 z-50 grid place-items-center p-4">
-            <motion.div
-              initial={{ opacity: 0, y: 18, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="relative w-full max-w-4xl overflow-hidden rounded-[2rem] border border-[#d9cab7] bg-[#fffaf1] p-4 shadow-[0_24px_80px_rgba(18,12,8,0.4)] sm:p-6"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <Dialog.Close asChild>
-                <button
-                  type="button"
-                  className="absolute right-4 top-4 z-10 h-10 w-10 rounded-full border border-[#d8c9b5] bg-white/90 text-xl font-semibold text-[#443129] transition hover:bg-white"
-                  aria-label="Fechar"
-                >
-                  x
-                </button>
-              </Dialog.Close>
-
-              {produtoSelecionado && (
-                <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr] md:items-start">
-                  <div className="overflow-hidden rounded-[1.4rem] border border-[#e3d6c4] bg-white">
+          <Reveal className="essence-copy">
+            <span className="eyebrow">A ESSÊNCIA BELLA</span>
+            <h2>
+              Não é só sobre joias.
+              <br />É sobre o que elas
+              <br />
+              <em>fazem sentir.</em>
+            </h2>
+            <p>
+              Aquela peça que vira parte de você. Que guarda uma lembrança, celebra uma conquista ou
+              simplesmente deixa a terça-feira mais bonita.
+            </p>
+            <p>
+              Acreditamos na beleza que acontece naturalmente. No brilho discreto. Na liberdade de
+              misturar, experimentar e ser quem você é.
+            </p>
+            <a href="#colecao" className="text-link">
+              Encontre algo que é a sua cara <ArrowUpRight size={18} />
+            </a>
+            <span className="signature">Com carinho, Bella.</span>
+          </Reveal>
+        </section>
+        <section className="care section-wrap" id="cuidado">
+          <Reveal className="section-heading">
+            <div>
+              <span className="eyebrow">PARA FICAR COM VOCÊ</span>
+              <h2>
+                O brilho também merece <em>cuidado.</em>
+              </h2>
+            </div>
+          </Reveal>
+          <div className="care-grid">
+            {[
+              [
+                Droplets,
+                "01",
+                "Menos química, mais brilho",
+                "Evite o contato com perfumes, cremes e produtos de limpeza. Vista suas joias por último.",
+              ],
+              [
+                Sun,
+                "02",
+                "Uma pausa faz bem",
+                "Retire suas peças antes do banho, da piscina e de atividades físicas.",
+              ],
+              [
+                Box,
+                "03",
+                "Um lugar só delas",
+                "Guarde cada peça separadamente, em um local seco e protegido da luz.",
+              ],
+            ].map(([Icon, n, title, description]) => (
+              <Reveal key={n} className="care-card">
+                <div>
+                  <Icon size={24} strokeWidth={1} />
+                  <span>{n}</span>
+                </div>
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+        <section className="closing">
+          <span className="eyebrow">SEU ESTILO. SUA HISTÓRIA.</span>
+          <h2>
+            O próximo detalhe
+            <br />é <em>todo seu.</em>
+          </h2>
+          <GlareButton as="a" href="#colecao" className="button button-dark">
+            Encontre sua peça favorita <ArrowUpRight size={18} />
+          </GlareButton>
+          <span className="closing-star" aria-hidden="true">
+            ✳
+          </span>
+        </section>
+        <Dialog.Root
+          open={!!selected}
+          onOpenChange={(open) => {
+            if (!open) setSelected(null);
+          }}
+        >
+          <Dialog.Portal>
+            <Dialog.Overlay className="dialog-overlay" />
+            <Dialog.Content className="product-dialog">
+              {selected && (
+                <>
+                  <div className="dialog-image">
                     <Image
-                      src={produtoSelecionado.imagem_url}
-                      alt={produtoSelecionado.nome}
-                      width={920}
-                      height={920}
-                      sizes="(max-width: 768px) 92vw, 55vw"
-                      quality={75}
-                      className="h-full max-h-[520px] w-full object-cover"
+                      src={selected.image}
+                      alt={selected.name}
+                      fill
+                      sizes="(max-width:700px) 90vw, 420px"
                     />
                   </div>
-
-                  <div className="pt-8 md:pt-4">
-                    <p className="inline-flex rounded-full border border-[#c9ae8d] bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#6c4f38]">
-                      {produtoSelecionado.categorias?.nome || "Sem categoria"}
-                    </p>
-
-                    <Dialog.Title asChild>
-                      <h2 className="luxury-title mt-4 text-4xl font-semibold leading-[0.95] text-[#261b16]">
-                        {produtoSelecionado.nome}
-                      </h2>
-                    </Dialog.Title>
-
-                    <p className="mt-4 text-sm leading-relaxed text-[#5b453a]">
-                      {produtoSelecionado.descricao ||
-                        "Descricao indisponivel para este item."}
-                    </p>
-
-                    <p className="mt-6 text-3xl font-semibold text-[#1f1714]">
-                      {formatCurrency(produtoSelecionado.preco)}
-                    </p>
-
-                    <a
-                      href={buildWhatsappLink(produtoSelecionado.nome)}
-                      target="_blank"
-                      rel="noopener"
-                      className="mt-6 inline-flex rounded-full bg-[#7e3147] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#612336]"
+                  <div className="dialog-copy">
+                    <span className="eyebrow">{selected.category} · BELLA PRATAS</span>
+                    <Dialog.Title>{selected.name}</Dialog.Title>
+                    <Dialog.Description>{selected.description}</Dialog.Description>
+                    <GlareButton as="a" className="button button-dark" href={productWhatsappUrl(selected)} target="_blank" rel="noopener noreferrer">
+                      Comprar pelo WhatsApp <ArrowUpRight size={18} />
+                    </GlareButton>
+                    <GlareButton
+                      className="button button-outline"
+                      onClick={() => favorite(selected.id)}
                     >
-                      Reservar no WhatsApp
-                    </a>
+                      <Heart
+                        size={18}
+                        fill={favorites.includes(selected.id) ? "currentColor" : "none"}
+                      />
+                      {favorites.includes(selected.id)
+                        ? "Remover dos favoritos"
+                        : "Guardar nos favoritos"}
+                    </GlareButton>
                   </div>
-                </div>
+                  <Dialog.Close asChild>
+                    <GlareButton className="dialog-close icon-button" aria-label="Fechar detalhes">
+                      <X size={22} />
+                    </GlareButton>
+                  </Dialog.Close>
+                </>
               )}
-
-              {!produtoSelecionado && (
-                <p className="py-16 text-center text-sm text-[#5f4a3f]">
-                  Selecione um produto para ver detalhes.
-                </p>
-              )}
-
-              {produtoSelecionado && (
-                <div className="mt-5 rounded-2xl border border-[#e4d8c8] bg-white/75 px-4 py-3 text-xs text-[#644d3f]">
-                  Clique em Reservar no WhatsApp para atendimento rapido e
-                  prioridade no pedido.
-                </div>
-              )}
-            </motion.div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-    </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      </div>
+    </MotionConfig>
   );
 }
