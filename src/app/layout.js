@@ -14,7 +14,25 @@ const cormorant = localFont({
   display: "swap",
   variable: "--font-cormorant",
 });
+// Set SITE_URL for a custom domain; supported hosts supply their production URL.
+const siteUrl = process.env.SITE_URL || process.env.URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://bella-pratas.vercel.app');
+
 export const metadata = {
+  metadataBase: new URL(siteUrl),
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'Bella Pratas',
+    title: 'Bella Pratas | Detalhes que ficam',
+    description: 'Joias cheias de significado. Encontre sua próxima peça favorita na Bella Pratas.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Bella Pratas | Detalhes que ficam',
+    description: 'Joias cheias de significado. Encontre sua próxima peça favorita na Bella Pratas.',
+    images: [{ url: '/opengraph-image', alt: 'Bella Pratas — Detalhes que ficam. Histórias que brilham.' }],
+  },
   title: "Bella Pratas | Detalhes que ficam",
   description: "Descubra joias cheias de significado na Bella Pratas. Encontre sua peça favorita e compre pelo WhatsApp.",
 };
@@ -32,3 +50,4 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+
